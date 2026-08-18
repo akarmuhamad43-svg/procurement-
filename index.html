@@ -117,6 +117,11 @@
   .switch::after{content:"";position:absolute;top:2px;inset-inline-end:2px;width:21px;height:21px;border-radius:50%;background:var(--muted);transition:.2s}
   .switch.on{background:rgba(245,158,11,.25);border-color:var(--approved)}
   .switch.on::after{inset-inline-end:auto;inset-inline-start:2px;background:var(--approved)}
+  .seg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .seg-btn{background:var(--bg);border:1.5px solid var(--line);border-radius:13px;padding:13px 12px;
+    cursor:pointer;font-family:inherit;font-size:13.5px;font-weight:700;color:var(--muted);transition:.15s}
+  .seg-btn:active{transform:scale(.97)}
+  .seg-btn.on{color:var(--text);border-color:var(--gold);background:#121826}
 
   .btn-add{width:100%;border:none;border-radius:14px;padding:15px;font-family:inherit;font-size:15px;font-weight:800;cursor:pointer;transition:.15s;color:#08131F;background:var(--gold)}
   .btn-add:active{transform:scale(.98)}
@@ -359,14 +364,31 @@
     <div class="card">
       <h2>داواکاری نوێ</h2>
       <div class="field"><label>ناوی کاڵا/خزمەتگوزاری</label><input type="text" id="pItem" placeholder="نموونە: کاغەزی A4"></div>
-      <div class="field"><label>بڕی پارە</label><input type="number" id="pAmount" placeholder="0" inputmode="decimal"></div>
+      <div class="row2">
+        <div class="field"><label>بڕی پارە (کۆی گشتی)</label><input type="number" id="pAmount" placeholder="0" inputmode="decimal"></div>
+        <div class="field"><label>بڕ (دانە)</label><input type="number" id="pQty" placeholder="1" value="1" min="1" inputmode="numeric"></div>
+      </div>
       <div class="price-hint" id="priceHint"></div>
       <div class="row2">
         <div class="field"><label>فرۆشیار</label><select id="pSupplier"></select></div>
         <div class="field"><label>ژمارەی PO</label><input type="text" id="pPO" placeholder="PO-..."></div>
       </div>
+      <div class="row2">
+        <div class="field"><label>بەروار</label><input type="date" id="pDate"></div>
+        <div class="field"><label>دۆخی داواکاری</label><select id="pStatus">
+          <option value="requested">داواکراو</option>
+          <option value="approved">پەسەندکراو</option>
+          <option value="purchased">کڕدراو</option>
+          <option value="paid">پارەدراو</option>
+        </select></div>
+      </div>
       <div class="field"><label>هاوپۆل</label><div class="cat-row" id="catRow"></div></div>
-      <div class="toggle-row"><span class="tl">بەبێ وەسڵ/فاتورە</span><div class="switch" id="pNoReceipt"></div></div>
+      <div class="field"><label>وەسڵ / فاتورە</label>
+        <div class="seg" id="pReceiptSeg">
+          <button type="button" class="seg-btn on" data-r="yes">وەسڵی هەیە</button>
+          <button type="button" class="seg-btn" data-r="no">وەسڵی نییە</button>
+        </div>
+      </div>
       <button class="btn-add" id="addPurBtn">زیادکردنی داواکاری</button>
     </div>
 
@@ -424,6 +446,7 @@
       <div class="add-task"><input type="text" id="taskInput" placeholder="نموونە: پەیوەندی بە فرۆشیار X"><button class="go" id="taskGo">＋</button></div>
     </div>
     <div id="taskList" style="margin-top:16px"></div>
+    <button class="btn ghost" id="taskPrintBtn" style="width:100%;margin-top:16px">🖨️ چاپکردن / PDF ی کارەکان</button>
   </div>
 
   <!-- ڕێکخستن -->
@@ -475,8 +498,9 @@
   <div class="field"><label>ناوی کاڵا</label><input type="text" id="dItem"></div>
   <div class="row2">
     <div class="field"><label>بڕی پارە</label><input type="number" id="dAmount" inputmode="decimal"></div>
-    <div class="field"><label>ژمارەی PO</label><input type="text" id="dPO"></div>
+    <div class="field"><label>بڕ (دانە)</label><input type="number" id="dQty" min="1" inputmode="numeric"></div>
   </div>
+  <div class="field"><label>ژمارەی PO</label><input type="text" id="dPO"></div>
   <div class="row2">
     <div class="field"><label>فرۆشیار</label><select id="dSupplier"></select></div>
     <div class="field"><label>وادەی پارەدان</label><input type="date" id="dDue"></div>
@@ -554,7 +578,7 @@ const STATUS_ICON={requested:'📝',approved:'✅',purchased:'📦',paid:'💵'}
 
 let sb=null,currentUser=null;
 let state={purchases:[],suppliers:[],quotes:[],categories:[],tasks:[],budgets:{}};
-let currentPage='purchases',selFilter='all',selCat=null,pNoReceipt=false;
+let currentPage='purchases',selFilter='all',selCat=null,pNoReceipt=false,pStatus='requested';
 let selMonth=monthKey(new Date().toISOString());
 let searchQ='',detailId=null,detailStatus='requested',detailCat=null,scoreId=null;
 let newCatEmoji=EMOJIS[0],newCatColor=PALETTE[0];
@@ -562,7 +586,7 @@ let authMode='signup';
 
 const supFromRow=r=>({id:r.id,name:r.name,phone:r.phone,email:r.email,category:r.category,notes:r.notes});
 const purFromRow=r=>({id:r.id,po:r.po_number,item:r.item_name,supplierId:r.supplier_id,amount:Number(r.amount),
-  cat:r.cat,status:r.status,noReceipt:r.no_receipt,saving:Number(r.saving),date:r.occurred_at,due:r.due_date,note:r.note,invoiceUrl:r.invoice_url});
+  qty:Number(r.qty==null?1:r.qty),cat:r.cat,status:r.status,noReceipt:r.no_receipt,saving:Number(r.saving),date:r.occurred_at,due:r.due_date,note:r.note,invoiceUrl:r.invoice_url});
 const quoteFromRow=r=>({id:r.id,purchaseId:r.purchase_id,supplierId:r.supplier_id,supplierName:r.supplier_name,amount:Number(r.amount),lead:r.lead_time_days,note:r.note,chosen:r.is_chosen});
 const catFromRow=r=>({id:r.id,name:r.name,icon:r.icon,color:r.color,slug:r.slug});
 const taskFromRow=r=>({id:r.id,text:r.text,done:r.done,date:r.created_at});
@@ -659,21 +683,40 @@ async function addPurchase(){
   const amount=parseFloat(document.getElementById('pAmount').value);
   if(!item){toast('ناوی کاڵا بنووسە');return;}
   if(!amount||amount<0){toast('بڕێکی دروست بنووسە');return;}
+  let qty=parseInt(document.getElementById('pQty').value);
+  if(!qty||qty<1)qty=1;
   const supplierId=document.getElementById('pSupplier').value||null;
   const po=document.getElementById('pPO').value.trim();
+  const dateVal=document.getElementById('pDate').value;
+  const occurred=dateVal?new Date(dateVal+'T12:00:00').toISOString():null;
   if(supplierId&&checkDuplicate(supplierId,amount)){
     if(!confirm('⚠️ داواکارییەکی هاوشێوە (هەمان فرۆشیار و بڕ) لەم ٧ ڕۆژەدا تۆمارکراوە. دووبارە زیاد بکرێت؟')) return;
   }
   await withSync(async()=>{
-    const {data,error}=await sb.from('purchases').insert({item_name:item,amount,supplier_id:supplierId,cat:selCat,po_number:po,no_receipt:pNoReceipt,status:'requested'}).select().single();
+    const payload={item_name:item,amount,qty,supplier_id:supplierId,cat:selCat,po_number:po,no_receipt:pNoReceipt,status:pStatus};
+    if(occurred)payload.occurred_at=occurred;
+    const {data,error}=await sb.from('purchases').insert(payload).select().single();
     if(error) throw error;
     state.purchases.unshift(purFromRow(data));
+    state.purchases.sort((a,b)=>new Date(b.date)-new Date(a.date));
     selMonth=monthKey(data.occurred_at);
+    selFilter='all';
+    document.querySelectorAll('.filter').forEach(x=>x.classList.toggle('active',x.dataset.f==='all'));
     document.getElementById('pItem').value='';document.getElementById('pAmount').value='';document.getElementById('pPO').value='';
+    document.getElementById('pQty').value='1';
+    {const n=new Date();document.getElementById('pDate').value=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');}
+    document.getElementById('pStatus').value='requested';pStatus='requested';
     document.getElementById('priceHint').classList.remove('show');
-    pNoReceipt=false;document.getElementById('pNoReceipt').classList.remove('on');
+    setReceipt(false);
     renderMonthBar();renderPurchases();renderAnalytics();renderSettings();
     toast('داواکاری زیادکرا ✓');
+  });
+}
+function setReceipt(noReceipt){
+  pNoReceipt=noReceipt;
+  document.querySelectorAll('#pReceiptSeg .seg-btn').forEach(b=>{
+    const isNo=b.dataset.r==='no';
+    b.classList.toggle('on',isNo===noReceipt);
   });
 }
 
@@ -709,10 +752,11 @@ function renderPurchases(){
     const c=catById(p.cat);
     const sv=p.saving>0?`<span class="badge save">پاشەکەوت ${fmt(p.saving)}</span>`:'';
     const nr=p.noReceipt?'<span class="badge nr">بەبێ وەسڵ</span>':'';
+    const qtyTxt=(p.qty&&p.qty>1)?` <span class="sup">×${enToKu(p.qty)}</span>`:'';
     const dueWarn=(p.status==='purchased'&&p.due)?`<span class="badge warn">وادە ${enToKu(new Date(p.due).toLocaleDateString('en-GB'))}</span>`:'';
     return `<div class="pur" onclick="openDetail('${p.id}')">
       <div class="ic">${c.icon}</div>
-      <div class="info"><div class="d">${esc(p.item)} ${nr}</div>
+      <div class="info"><div class="d">${esc(p.item)}${qtyTxt} ${nr}</div>
         <div class="dt"><span class="sup">${esc(supName(p.supplierId))}</span> • ${relDate(p.date)}${p.po?' • '+esc(p.po):''}</div></div>
       <div class="right"><div class="amt num">${fmt(p.amount)}</div><span class="badge ${p.status}">${STATUS_LABEL[p.status]}</span>${sv||dueWarn}</div>
     </div>`;
@@ -725,6 +769,7 @@ function openDetail(id){
   detailId=id;detailStatus=p.status;detailCat=p.cat||fallbackCat().id;
   document.getElementById('dItem').value=p.item;
   document.getElementById('dAmount').value=p.amount;
+  document.getElementById('dQty').value=p.qty||1;
   document.getElementById('dPO').value=p.po||'';
   document.getElementById('dSupplier').value=p.supplierId||'';
   document.getElementById('dDue').value=p.due||'';
@@ -744,10 +789,12 @@ async function saveDetail(){
   const po=document.getElementById('dPO').value.trim();
   const supplierId=document.getElementById('dSupplier').value||null;
   const due=document.getElementById('dDue').value||null;
+  let qty=parseInt(document.getElementById('dQty').value);
+  if(!qty||qty<1)qty=1;
   await withSync(async()=>{
-    const {error}=await sb.from('purchases').update({item_name:item,amount,po_number:po,supplier_id:supplierId,due_date:due,cat:detailCat,status:detailStatus}).eq('id',detailId);
+    const {error}=await sb.from('purchases').update({item_name:item,amount,qty,po_number:po,supplier_id:supplierId,due_date:due,cat:detailCat,status:detailStatus}).eq('id',detailId);
     if(error) throw error;
-    Object.assign(p,{item,amount,po,supplierId,due,cat:detailCat,status:detailStatus});
+    Object.assign(p,{item,amount,qty,po,supplierId,due,cat:detailCat,status:detailStatus});
     closeDetail();renderMonthBar();renderPurchases();renderAnalytics();renderSettings();toast('پاشەکەوتکرا ✓');
   });
 }
@@ -863,12 +910,37 @@ function printPO(){
   <div style="text-align:left"><div class="muted">ژمارە: <b>${esc(p.po||'—')}</b></div><div class="muted">بەروار: ${today}</div></div></div>
   <div class="grid"><div class="box"><div class="lbl">فرۆشیار</div><div class="val">${esc(s?s.name:'—')}</div><div class="muted">${esc(s?s.phone:'')}</div></div>
   <div class="box"><div class="lbl">دۆخ</div><div class="val">${STATUS_LABEL[p.status]}</div></div></div>
-  <table><thead><tr><th>کاڵا/خزمەتگوزاری</th><th>بڕی پارە</th></tr></thead>
-  <tbody><tr><td>${esc(p.item)}</td><td>${fmt(p.amount)} د.ع</td></tr></tbody></table>
+  <table><thead><tr><th>کاڵا/خزمەتگوزاری</th><th>بڕ (دانە)</th><th>بڕی پارە</th></tr></thead>
+  <tbody><tr><td>${esc(p.item)}</td><td>${enToKu(p.qty||1)}</td><td>${fmt(p.amount)} د.ع</td></tr></tbody></table>
   ${qs.length?`<h3 style="margin-top:24px;font-size:15px">بەراوردی نرخ</h3><table><thead><tr><th>فرۆشیار</th><th>نرخ</th><th>کاتی گەیشتن</th><th></th></tr></thead><tbody>${qRows}</tbody></table>`:''}
   <div class="total">کۆی گشتی: ${fmt(p.amount)} د.ع</div>
   ${p.saving>0?`<div class="muted" style="text-align:left;color:#16a34a;font-weight:700">پاشەکەوت لە بەراوردی نرخ: ${fmt(p.saving)} د.ع</div>`:''}
   <div class="sign"><div><div class="line"></div>واژووی داواکار</div><div><div class="line"></div>واژووی پەسەندکار</div></div>
+  <script>window.onload=function(){setTimeout(function(){window.print()},400)}<\/script></body></html>`);
+  w.document.close();
+}
+
+function printTasks(){
+  if(!state.tasks.length){toast('هیچ کارێک نییە');return;}
+  const today=enToKu(new Date().toLocaleDateString('en-GB'));
+  const done=state.tasks.filter(t=>t.done),pending=state.tasks.filter(t=>!t.done);
+  const rows=arr=>arr.map(t=>`<tr><td class="chk">${t.done?'☑':'☐'}</td><td>${esc(t.text)}</td><td class="muted">${enToKu(new Date(t.date).toLocaleDateString('en-GB'))}</td></tr>`).join('');
+  const w=window.open('','_blank');
+  if(!w){toast('تکایە ڕێگە بدە بە کردنەوەی پەنجەرە');return;}
+  w.document.write(`<!DOCTYPE html><html dir="rtl" lang="ckb"><head><meta charset="utf-8"><title>کارەکان</title>
+  <style>@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;700;800&display=swap');
+  *{font-family:'Vazirmatn',sans-serif;box-sizing:border-box}body{padding:40px;color:#111;max-width:800px;margin:auto}
+  h1{font-size:24px;margin:0 0 4px}.muted{color:#888;font-size:12px}
+  .head{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:3px solid #FBBF24;padding-bottom:16px;margin-bottom:24px}
+  h3{font-size:15px;margin:22px 0 8px}
+  table{width:100%;border-collapse:collapse}td{border:1px solid #ddd;padding:10px;text-align:right;font-size:13px}
+  .chk{width:36px;text-align:center;font-size:16px}
+  tr.d td{color:#999;text-decoration:line-through}
+  @media print{body{padding:20px}}</style></head><body>
+  <div class="head"><div><h1>لیستی کارەکان</h1><div class="muted">Task List</div></div>
+  <div style="text-align:left"><div class="muted">بەروار: ${today}</div><div class="muted">کۆ: ${enToKu(state.tasks.length)} • ماوە: ${enToKu(pending.length)}</div></div></div>
+  ${pending.length?`<h3>⏳ کاری ماوە (${enToKu(pending.length)})</h3><table><tbody>${rows(pending)}</tbody></table>`:''}
+  ${done.length?`<h3>✅ تەواوبوو (${enToKu(done.length)})</h3><table><tbody>${done.map(t=>`<tr class="d"><td class="chk">☑</td><td>${esc(t.text)}</td><td class="muted">${enToKu(new Date(t.date).toLocaleDateString('en-GB'))}</td></tr>`).join('')}</tbody></table>`:''}
   <script>window.onload=function(){setTimeout(function(){window.print()},400)}<\/script></body></html>`);
   w.document.close();
 }
@@ -1046,8 +1118,8 @@ function renderSettings(){
 /* ================= EXPORT ================= */
 function download(text,name,mime){try{const b=new Blob([text],{type:mime});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),2000);toast('دابەزێنرا ✓');}catch(e){toast('داگرتن سەرکەوتوو نەبوو');}}
 function exportCSV(){
-  const rows=[['po','item','supplier','amount','category','status','saving','no_receipt','date','due']];
-  state.purchases.forEach(p=>{rows.push([p.po,'"'+(p.item||'').replace(/"/g,'""')+'"','"'+supName(p.supplierId)+'"',p.amount,'"'+catById(p.cat).name+'"',p.status,p.saving,p.noReceipt,p.date,p.due||'']);});
+  const rows=[['po','item','qty','supplier','amount','category','status','saving','no_receipt','date','due']];
+  state.purchases.forEach(p=>{rows.push([p.po,'"'+(p.item||'').replace(/"/g,'""')+'"',p.qty||1,'"'+supName(p.supplierId)+'"',p.amount,'"'+catById(p.cat).name+'"',p.status,p.saving,p.noReceipt,p.date,p.due||'']);});
   download(rows.map(r=>r.join(',')).join('\n'),'purchases-'+new Date().toISOString().slice(0,10)+'.csv','text/csv');
 }
 function exportJSON(){download(JSON.stringify(state,null,2),'backup-'+new Date().toISOString().slice(0,10)+'.json','application/json');}
@@ -1084,17 +1156,21 @@ async function signOut(){await sb.auth.signOut();}
 function showScreen(w){['configScreen','authScreen','bootScreen'].forEach(id=>document.getElementById(id).classList.add('hidden'));document.getElementById('app').classList.add('hidden');if(w==='app')document.getElementById('app').classList.remove('hidden');else document.getElementById(w).classList.remove('hidden');}
 async function enterApp(){
   showScreen('bootScreen');
-  try{await loadAll();buildCatPickers();buildSupplierSelects();renderMonthBar();renderPurchases();renderSuppliers();renderAnalytics();renderTasks();renderSettings();showScreen('app');}
+  try{await loadAll();buildCatPickers();buildSupplierSelects();renderMonthBar();renderPurchases();renderSuppliers();renderAnalytics();renderTasks();renderSettings();
+    const pd=document.getElementById('pDate');if(pd&&!pd.value){const n=new Date();pd.value=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');}
+    showScreen('app');}
   catch(e){console.error(e);showScreen('authScreen');showAuthError('نەتوانرا داتا باربکرێت. دڵنیابە کۆدی SQL جێبەجێکراوە. ('+((e&&e.message)||'')+')');}
 }
 
 /* ================= CONTROLS ================= */
 document.getElementById('pItem').addEventListener('input',checkPriceMemory);
 document.getElementById('pAmount').addEventListener('input',checkPriceMemory);
-document.getElementById('pNoReceipt').onclick=function(){pNoReceipt=!pNoReceipt;this.classList.toggle('on',pNoReceipt);};
+document.querySelectorAll('#pReceiptSeg .seg-btn').forEach(b=>b.addEventListener('click',()=>setReceipt(b.dataset.r==='no')));
+document.getElementById('pStatus').addEventListener('change',e=>{pStatus=e.target.value;});
 document.getElementById('addPurBtn').onclick=addPurchase;
 document.getElementById('addSupBtn').onclick=addSupplier;
 document.getElementById('taskGo').onclick=addTask;
+document.getElementById('taskPrintBtn').onclick=printTasks;
 document.getElementById('taskInput').addEventListener('keydown',e=>{if(e.key==='Enter')addTask();});
 
 document.querySelectorAll('.filter').forEach(f=>f.addEventListener('click',()=>{document.querySelectorAll('.filter').forEach(x=>x.classList.remove('active'));f.classList.add('active');selFilter=f.dataset.f;renderPurchases();}));
