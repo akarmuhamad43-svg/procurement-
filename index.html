@@ -221,6 +221,10 @@
   .badge.warn{background:rgba(251,113,133,.16);color:var(--warn)}
   .badge.nr{background:rgba(245,158,11,.16);color:var(--approved)}
   .badge.ok{background:rgba(52,211,153,.14);color:var(--save)}
+  .badge.zh{background:rgba(239,68,68,.18);color:#fca5a5}
+  .badge.bru{background:rgba(148,163,184,.16);color:var(--muted)}
+  .seg3{grid-template-columns:1fr 1fr 1fr}
+  .seg3 .seg-btn{padding:12px 4px;font-size:12px}
   .due-alert{display:none;margin:4px 0 4px;background:linear-gradient(180deg,rgba(239,68,68,.10),rgba(239,68,68,.04));
     border:1.5px solid rgba(239,68,68,.35);border-radius:16px;padding:12px 14px}
   .due-alert.show{display:block}
@@ -492,7 +496,7 @@
   /* compact / list view */
   #purList.compact .pur{padding:9px 12px;margin-bottom:7px;border-radius:12px}
   #purList.compact .pur .ic{width:32px;height:32px;font-size:15px}
-  #purList.compact .pur .dt{display:none}
+  #purList.compact .pur .dt{font-size:10.5px}
   #purList.compact .pur .d{font-size:13px}
   #purList.compact .pur .amt{font-size:14px}
 </style>
@@ -597,10 +601,11 @@
       </div>
       <div class="field"><label>پرۆژە</label><select id="pProject"></select></div>
       <div class="field"><label>هاوپۆل</label><div class="cat-row" id="catRow"></div></div>
-      <div class="field"><label>وەسڵ / فاتورە</label>
-        <div class="seg" id="pReceiptSeg">
-          <button type="button" class="seg-btn on" data-r="yes">وەسڵی هەیە</button>
-          <button type="button" class="seg-btn" data-r="no">وەسڵی نییە</button>
+      <div class="field"><label>جۆری وەسڵ</label>
+        <div class="seg seg3" id="pReceiptSeg">
+          <button type="button" class="seg-btn" data-r="zhira">🔴 ژیرە</button>
+          <button type="button" class="seg-btn on" data-r="bru">⚫ بڕوا</button>
+          <button type="button" class="seg-btn" data-r="none">بەبێ وەسڵ</button>
         </div>
       </div>
       <button class="btn-add" id="addPurBtn">زیادکردنی داواکاری</button>
@@ -814,10 +819,11 @@
     <div class="field"><label>یەکەی دراو</label><select id="dCurrency"><option value="IQD">دینار (د.ع)</option><option value="USD">دۆلار ($)</option></select></div>
   </div>
   <div class="field"><label>هاوپۆل</label><div class="cat-row" id="dCatRow"></div></div>
-  <div class="field"><label>وەسڵ / فاتورە</label>
-    <div class="seg" id="dReceiptSeg">
-      <button type="button" class="seg-btn on" data-r="yes">وەسڵی هەیە</button>
-      <button type="button" class="seg-btn" data-r="no">وەسڵی نییە</button>
+  <div class="field"><label>جۆری وەسڵ</label>
+    <div class="seg seg3" id="dReceiptSeg">
+      <button type="button" class="seg-btn" data-r="zhira">🔴 ژیرە</button>
+      <button type="button" class="seg-btn on" data-r="bru">⚫ بڕوا</button>
+      <button type="button" class="seg-btn" data-r="none">بەبێ وەسڵ</button>
     </div>
   </div>
 
@@ -927,9 +933,9 @@ const STATUS_ICON={requested:'📝',approved:'✅',purchased:'📦',paid:'💵'}
 
 let sb=null,currentUser=null;
 let state={purchases:[],suppliers:[],quotes:[],categories:[],tasks:[],budgets:{},projects:[]};
-let currentPage='purchases',selFilter='all',selCat=null,pNoReceipt=false,pStatus='requested';
+let currentPage='purchases',selFilter='all',selCat=null,pReceipt='bru',pStatus='requested';
 let selMonth=monthKey(new Date().toISOString());
-let searchQ='',detailId=null,detailStatus='requested',detailCat=null,detailNoReceipt=false,scoreId=null;
+let searchQ='',detailId=null,detailStatus='requested',detailCat=null,detailReceipt='bru',scoreId=null;
 let newCatEmoji=EMOJIS[0],newCatColor=PALETTE[0];
 const SUP_EMOJIS=['🏢','🏭','🏪','🚚','🧰','🔧','💻','🖨️','🪑','📦','⛽','🍽️','🧱','🚗','💡','📱','🏗️','🧪','🛠️','📚','🖥️','🥤'];
 let newSupIcon=SUP_EMOJIS[0],scoreIcon='🏢';
@@ -937,7 +943,7 @@ let authMode='signup';
 
 const supFromRow=r=>({id:r.id,name:r.name,phone:r.phone,email:r.email,category:r.category,notes:r.notes,icon:r.icon||'🏢'});
 const purFromRow=r=>({id:r.id,po:r.po_number,item:r.item_name,supplierId:r.supplier_id,amount:Number(r.amount),
-  qty:Number(r.qty==null?1:r.qty),cat:r.cat,status:r.status,noReceipt:r.no_receipt,saving:Number(r.saving),date:r.occurred_at,due:r.due_date,note:r.note,invoiceUrl:r.invoice_url,projectId:r.project_id||null,currency:r.currency||'IQD'});
+  qty:Number(r.qty==null?1:r.qty),cat:r.cat,status:r.status,noReceipt:r.no_receipt,receiptType:r.receipt_type||'bru',saving:Number(r.saving),date:r.occurred_at,due:r.due_date,note:r.note,invoiceUrl:r.invoice_url,projectId:r.project_id||null,currency:r.currency||'IQD'});
 const projFromRow=r=>({id:r.id,name:r.name,budget:r.budget==null?null:Number(r.budget),color:r.color||'#FBBF24'});
 const quoteFromRow=r=>({id:r.id,purchaseId:r.purchase_id,supplierId:r.supplier_id,supplierName:r.supplier_name,amount:Number(r.amount),lead:r.lead_time_days,note:r.note,chosen:r.is_chosen});
 const catFromRow=r=>({id:r.id,name:r.name,icon:r.icon,color:r.color,slug:r.slug});
@@ -1059,7 +1065,7 @@ async function addPurchase(){
     if(!confirm('⚠️ داواکارییەکی هاوشێوە (هەمان فرۆشیار و بڕ) لەم ٧ ڕۆژەدا تۆمارکراوە. دووبارە زیاد بکرێت؟')) return;
   }
   await withSync(async()=>{
-    const payload={item_name:item,amount,qty,supplier_id:supplierId,cat:selCat,po_number:po,no_receipt:pNoReceipt,status:pStatus,project_id:projectId,currency};
+    const payload={item_name:item,amount,qty,supplier_id:supplierId,cat:selCat,po_number:po,no_receipt:pReceipt==='none',receipt_type:pReceipt,status:pStatus,project_id:projectId,currency};
     if(occurred)payload.occurred_at=occurred;
     const {data,error}=await sb.from('purchases').insert(payload).select().single();
     if(error) throw error;
@@ -1073,17 +1079,14 @@ async function addPurchase(){
     {const n=new Date();document.getElementById('pDate').value=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');}
     document.getElementById('pStatus').value='requested';pStatus='requested';
     document.getElementById('priceHint').classList.remove('show');
-    setReceipt(false);
+    setReceipt('bru');
     renderMonthBar();renderPurchases();renderAnalytics();renderSettings();
     toast('داواکاری زیادکرا ✓');
   });
 }
-function setReceipt(noReceipt){
-  pNoReceipt=noReceipt;
-  document.querySelectorAll('#pReceiptSeg .seg-btn').forEach(b=>{
-    const isNo=b.dataset.r==='no';
-    b.classList.toggle('on',isNo===noReceipt);
-  });
+function setReceipt(val){
+  pReceipt=val;
+  document.querySelectorAll('#pReceiptSeg .seg-btn').forEach(b=>b.classList.toggle('on',b.dataset.r===val));
 }
 function renderQuickChips(){
   const box=document.getElementById('quickChips');if(!box)return;
@@ -1185,7 +1188,7 @@ function renderPurchases(){
   list.innerHTML=shown.map(p=>{
     const c=catById(p.cat);
     const sv=p.saving>0?`<span class="badge save">پاشەکەوت ${fmt(p.saving)}</span>`:'';
-    const nr=p.noReceipt?'<span class="badge nr">بەبێ وەسڵ</span>':'<span class="badge ok">وەسڵی هەیە</span>';
+    const nr=p.receiptType==='zhira'?'<span class="badge zh">🔴 ژیرە</span>':p.receiptType==='none'?'<span class="badge nr">بەبێ وەسڵ</span>':'<span class="badge bru">بڕوا</span>';
     const qtyTxt=(p.qty&&p.qty>1)?` <span class="sup">×${enToKu(p.qty)}</span>`:'';
     const dueWarn=(p.status==='purchased'&&p.due)?`<span class="badge warn">وادە ${enToKu(new Date(p.due).toLocaleDateString('en-GB'))}</span>`:'';
     return `<div class="pur" onclick="openDetail('${p.id}')">
@@ -1231,7 +1234,7 @@ function openDetail(id){
   document.getElementById('dProject').value=p.projectId||'';
   document.getElementById('dCurrency').value=p.currency||'IQD';
   markCat(document.getElementById('dCatRow'),detailCat);
-  detailNoReceipt=!!p.noReceipt;markDetailReceipt();
+  detailReceipt=p.receiptType||'bru';markDetailReceipt();
   markStepper();
   renderQuotes();
   renderInvoice(p);
@@ -1239,7 +1242,7 @@ function openDetail(id){
 }
 function closeDetail(){document.getElementById('detailOverlay').classList.remove('show');detailId=null;}
 function markStepper(){document.querySelectorAll('#dStepper .step').forEach(s=>s.classList.toggle('on',s.dataset.s===detailStatus));}
-function markDetailReceipt(){document.querySelectorAll('#dReceiptSeg .seg-btn').forEach(b=>{const isNo=b.dataset.r==='no';b.classList.toggle('on',isNo===detailNoReceipt);});}
+function markDetailReceipt(){document.querySelectorAll('#dReceiptSeg .seg-btn').forEach(b=>b.classList.toggle('on',b.dataset.r===detailReceipt));}
 async function saveDetail(){
   const p=state.purchases.find(x=>x.id===detailId);if(!p)return;
   const amount=parseFloat(document.getElementById('dAmount').value);
@@ -1253,9 +1256,9 @@ async function saveDetail(){
   const projectId=document.getElementById('dProject').value||null;
   const currency=document.getElementById('dCurrency').value||'IQD';
   await withSync(async()=>{
-    const {error}=await sb.from('purchases').update({item_name:item,amount,qty,po_number:po,supplier_id:supplierId,due_date:due,cat:detailCat,status:detailStatus,no_receipt:detailNoReceipt,project_id:projectId,currency}).eq('id',detailId);
+    const {error}=await sb.from('purchases').update({item_name:item,amount,qty,po_number:po,supplier_id:supplierId,due_date:due,cat:detailCat,status:detailStatus,no_receipt:detailReceipt==='none',receipt_type:detailReceipt,project_id:projectId,currency}).eq('id',detailId);
     if(error) throw error;
-    Object.assign(p,{item,amount,qty,po,supplierId,due,cat:detailCat,status:detailStatus,noReceipt:detailNoReceipt,projectId,currency});
+    Object.assign(p,{item,amount,qty,po,supplierId,due,cat:detailCat,status:detailStatus,noReceipt:detailReceipt==='none',receiptType:detailReceipt,projectId,currency});
     closeDetail();renderMonthBar();renderPurchases();renderAnalytics();renderSettings();toast('پاشەکەوتکرا ✓');
   });
 }
@@ -1271,7 +1274,7 @@ async function deleteDetail(){
 async function reorderPurchase(){
   const p=state.purchases.find(x=>x.id===detailId);if(!p)return;
   await withSync(async()=>{
-    const {data,error}=await sb.from('purchases').insert({item_name:p.item,amount:p.amount,qty:p.qty||1,supplier_id:p.supplierId,cat:p.cat,po_number:'',no_receipt:p.noReceipt,status:'requested'}).select().single();
+    const {data,error}=await sb.from('purchases').insert({item_name:p.item,amount:p.amount,qty:p.qty||1,supplier_id:p.supplierId,cat:p.cat,po_number:'',no_receipt:p.receiptType==='none',receipt_type:p.receiptType||'bru',status:'requested'}).select().single();
     if(error) throw error;
     state.purchases.unshift(purFromRow(data));
     state.purchases.sort((a,b)=>new Date(b.date)-new Date(a.date));
@@ -1374,7 +1377,7 @@ function printPO(){
   <style>${pdfStyle()}</style></head><body><div class="wrap">
   ${pdfHeader('داواکاری کڕین — Purchase Order',right)}
   <div class="grid"><div class="box"><div class="lbl">فرۆشیار</div><div class="val">${esc(s?s.name:'—')}</div><div class="muted">${esc(s?s.phone:'')}</div></div>
-  <div class="box"><div class="lbl">دۆخ</div><div class="val">${STATUS_LABEL[p.status]}</div><div class="muted">${p.noReceipt?'بەبێ وەسڵ':'وەسڵی هەیە'}</div></div></div>
+  <div class="box"><div class="lbl">دۆخ</div><div class="val">${STATUS_LABEL[p.status]}</div><div class="muted">${p.receiptType==='zhira'?'وەسڵی ژیرە':p.receiptType==='none'?'بەبێ وەسڵ':'وەسڵی بڕوا'}</div></div></div>
   <table><thead><tr><th>کاڵا/خزمەتگوزاری</th><th>بڕ (دانە)</th><th>بڕی پارە</th></tr></thead>
   <tbody><tr><td>${esc(p.item)}</td><td>${enToKu(p.qty||1)}</td><td>${fmt(p.amount)} د.ع</td></tr></tbody></table>
   ${qs.length?`<h3>بەراوردی نرخ</h3><table><thead><tr><th>فرۆشیار</th><th>نرخ</th><th>کاتی گەیشتن</th><th></th></tr></thead><tbody>${qRows}</tbody></table>`:''}
@@ -1917,8 +1920,8 @@ function renderSettings(){
 /* ================= EXPORT ================= */
 function download(text,name,mime){try{const b=new Blob([text],{type:mime});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),2000);toast('دابەزێنرا ✓');}catch(e){toast('داگرتن سەرکەوتوو نەبوو');}}
 function exportCSV(){
-  const rows=[['po','item','qty','supplier','amount','category','status','saving','no_receipt','date','due']];
-  state.purchases.forEach(p=>{rows.push([p.po,'"'+(p.item||'').replace(/"/g,'""')+'"',p.qty||1,'"'+supName(p.supplierId)+'"',p.amount,'"'+catById(p.cat).name+'"',p.status,p.saving,p.noReceipt,p.date,p.due||'']);});
+  const rows=[['po','item','qty','supplier','amount','category','status','receipt_type','saving','date','due']];
+  state.purchases.forEach(p=>{rows.push([p.po,'"'+(p.item||'').replace(/"/g,'""')+'"',p.qty||1,'"'+supName(p.supplierId)+'"',p.amount,'"'+catById(p.cat).name+'"',p.status,p.receiptType||'',p.saving,p.date,p.due||'']);});
   download(rows.map(r=>r.join(',')).join('\n'),'purchases-'+new Date().toISOString().slice(0,10)+'.csv','text/csv');
 }
 function exportJSON(){download(JSON.stringify(state,null,2),'backup-'+new Date().toISOString().slice(0,10)+'.json','application/json');}
@@ -1955,7 +1958,7 @@ async function importData(file){
       const chunk=purIn.slice(i,i+200).map(p=>{
         const row={item_name:String(p.item||'—').slice(0,300),amount:Number(p.amount)||0,qty:Number(p.qty)||1,
           status:['requested','approved','purchased','paid'].includes(p.status)?p.status:'paid',
-          no_receipt:!!p.noReceipt,note:String(p.note||'').slice(0,500),po_number:String(p.po||'')};
+          no_receipt:(p.receiptType==='none')||!!p.noReceipt,receipt_type:(['zhira','bru','none'].includes(p.receiptType)?p.receiptType:'bru'),note:String(p.note||'').slice(0,500),po_number:String(p.po||'')};
         if(p.supplier&&nameToId[String(p.supplier).trim()])row.supplier_id=nameToId[String(p.supplier).trim()];
         if(p.date){const d=new Date(p.date);if(!isNaN(d))row.occurred_at=d.toISOString();}
         return row;
@@ -2136,7 +2139,7 @@ document.getElementById('aiVoiceInput').addEventListener('keydown',e=>{if(e.key=
   if(m){m.value=getAiModel();m.addEventListener('change',()=>{try{localStorage.setItem('vim_ai_model',m.value.trim()||'claude-3-5-sonnet-latest');}catch(e){}});}
 })();
 document.getElementById('pAmount').addEventListener('input',checkPriceMemory);
-document.querySelectorAll('#pReceiptSeg .seg-btn').forEach(b=>b.addEventListener('click',()=>setReceipt(b.dataset.r==='no')));
+document.querySelectorAll('#pReceiptSeg .seg-btn').forEach(b=>b.addEventListener('click',()=>setReceipt(b.dataset.r)));
 document.getElementById('pStatus').addEventListener('change',e=>{pStatus=e.target.value;});
 document.getElementById('addPurBtn').onclick=addPurchase;
 document.getElementById('addSupBtn').onclick=addSupplier;
@@ -2172,7 +2175,7 @@ document.getElementById('dSave').onclick=saveDetail;
 document.getElementById('dDelete').onclick=deleteDetail;
 document.getElementById('detailOverlay').onclick=e=>{if(e.target.id==='detailOverlay')closeDetail();};
 document.querySelectorAll('#dStepper .step').forEach(s=>s.addEventListener('click',()=>{detailStatus=s.dataset.s;markStepper();}));
-document.querySelectorAll('#dReceiptSeg .seg-btn').forEach(b=>b.addEventListener('click',()=>{detailNoReceipt=b.dataset.r==='no';markDetailReceipt();}));
+document.querySelectorAll('#dReceiptSeg .seg-btn').forEach(b=>b.addEventListener('click',()=>{detailReceipt=b.dataset.r;markDetailReceipt();}));
 document.getElementById('qAddBtn').onclick=addQuote;
 document.getElementById('poPrintBtn').onclick=printPO;
 document.getElementById('rcPrintBtn').onclick=printReceipt;
