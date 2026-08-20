@@ -228,6 +228,20 @@
   .due-alert{display:none;margin:4px 0 4px;background:linear-gradient(180deg,rgba(239,68,68,.10),rgba(239,68,68,.04));
     border:1.5px solid rgba(239,68,68,.35);border-radius:16px;padding:12px 14px}
   .due-alert.show{display:block}
+  .assistant{margin:2px 0 6px;display:flex;flex-direction:column;gap:8px}
+  .asst-card{display:flex;gap:11px;align-items:flex-start;padding:13px 14px;border-radius:16px;font-size:13px;line-height:1.6;
+    background:linear-gradient(135deg,color-mix(in srgb,var(--gold) 12%,transparent),color-mix(in srgb,var(--purchased) 8%,transparent));
+    border:1px solid color-mix(in srgb,var(--gold) 25%,var(--line));animation:pop .4s both}
+  .asst-card .ai{font-size:20px;flex-shrink:0;line-height:1.3}
+  .asst-card .tx{flex:1}.asst-card .tx b{font-weight:800;color:var(--gold)}
+  .asst-card.warn{background:linear-gradient(135deg,rgba(245,158,11,.12),rgba(245,158,11,.04));border-color:rgba(245,158,11,.35)}
+  .asst-card.alert{background:linear-gradient(135deg,rgba(239,68,68,.12),rgba(239,68,68,.04));border-color:rgba(239,68,68,.35)}
+  .asst-card.good{background:linear-gradient(135deg,rgba(52,211,153,.12),rgba(52,211,153,.04));border-color:rgba(52,211,153,.3)}
+  .asst-card .close{background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;padding:0 2px;flex-shrink:0}
+  .audit-row{padding:9px 0;border-bottom:1px solid var(--line);font-size:12px}
+  .audit-row .aa{font-weight:800;color:var(--gold)}
+  .audit-row .ad{color:var(--text);margin:2px 0}
+  .audit-row .at{color:var(--muted);font-size:10.5px}
   .da-head{display:flex;justify-content:space-between;align-items:center;font-weight:800;font-size:13px;color:#fca5a5;margin-bottom:8px}
   .da-item{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:9px 10px;border-radius:11px;
     background:var(--card);margin-top:6px;cursor:pointer;border:1px solid var(--line)}
@@ -552,6 +566,7 @@
       <div class="mlabel"><div class="mm" id="monthLabel">—</div><div class="today-tag" id="todayTag">ئەم مانگە</div></div>
       <button id="nextMonth">›</button>
     </div>
+    <div class="assistant" id="assistant"></div>
     <div class="hero">
       <div class="label">💰 پاشەکەوتی گشتی بۆ کۆمپانیا</div>
       <div class="amount"><span id="totalSaving" class="num">0</span><span class="cur">د.ع</span></div>
@@ -732,6 +747,26 @@
       <div class="cat-manage" id="catManage"></div>
     </div>
     <div class="set-group">
+      <div class="gt">📑 ژمێریاری</div>
+      <div class="field"><label>ماوە</label><select id="acctScope">
+        <option value="all">هەموو کات</option>
+        <option value="year">ئەم ساڵە</option>
+        <option value="month">ئەم مانگە</option>
+      </select></div>
+      <div class="set-row"><div class="si">🖨️</div><div class="sb"><div class="st">ڕاپۆرتی ژمێریاری (PDF)</div><div class="ss">کۆی مانگانە، ژیرە/بڕوا، هاوپۆل</div></div><button class="btn-sm gold" id="acctPdfBtn">PDF</button></div>
+      <div class="set-row"><div class="si">📊</div><div class="sb"><div class="st">هەناردە بۆ ژمێریار (CSV)</div><div class="ss">فایلی Excel بۆ ژمێریار</div></div><button class="btn-sm" id="acctCsvBtn">CSV</button></div>
+    </div>
+    <div class="set-group">
+      <div class="gt">🧾 پەسەندکردن</div>
+      <div class="field"><label>ناوی بەرپرسی پەسەندکردن</label><input type="text" id="approverName" placeholder="نموونە: ئاکار محەمەد"></div>
+      <div style="font-size:11.5px;color:var(--muted);line-height:1.7">کاتێک داواکارییەک پەسەند دەکەیت (دۆخ → پەسەندکراو)، ناوەکە لە تۆماری چالاکیدا هەڵدەگیرێت.</div>
+    </div>
+    <div class="set-group">
+      <div class="gt">🔐 تۆماری چالاکی</div>
+      <div class="set-row"><div class="si">📜</div><div class="sb"><div class="st">مێژووی گۆڕانکارییەکان</div><div class="ss">کێ، کەی، چی گۆڕا</div></div><button class="btn-sm red" id="auditClearBtn">پاککردنەوە</button></div>
+      <div id="auditBox" style="margin-top:10px"></div>
+    </div>
+    <div class="set-group">
       <div class="gt">💾 پاشەکەوت</div>
       <div class="set-row"><div class="si">📊</div><div class="sb"><div class="st">هەناردەی CSV</div><div class="ss">هەموو داواکارییەکان بۆ Excel</div></div><button class="btn-sm gold" id="csvBtn">CSV</button></div>
       <div class="set-row"><div class="si">📤</div><div class="sb"><div class="st">هەناردەی JSON</div><div class="ss">وێنەی تەواوی داتا</div></div><button class="btn-sm" id="jsonBtn">JSON</button></div>
@@ -906,6 +941,23 @@ th{background:#FACC15;color:#111;font-weight:700}tr:nth-child(even) td{backgroun
 function pdfHeader(title,rightHtml){return `<div class="brand"><img src="${VIM_LOGO}" alt="VIM"><div><div class="bn">${VIM_NAME}</div><div class="bs">سیستەمی کڕین • Procurement</div></div></div>
 <div class="meta"><div class="doc-title">${title}</div><div style="text-align:left">${rightHtml||''}</div></div>`;}
 function pdfFooter(){return `<div class="foot">${VIM_NAME} — بەرهەمهێنراوە لە سیستەمی کڕین</div>`;}
+/* ================= تۆماری چالاکی (Audit Log) ================= */
+function auditGet(){try{return JSON.parse(localStorage.getItem('vim_audit')||'[]');}catch(e){return [];}}
+function logAudit(action,detail){
+  try{
+    const log=auditGet();
+    log.unshift({t:new Date().toISOString(),by:(currentUser&&currentUser.email)||'—',a:action,d:detail||''});
+    localStorage.setItem('vim_audit',JSON.stringify(log.slice(0,500)));
+  }catch(e){}
+}
+function fmtAuditTime(iso){const d=new Date(iso);return enToKu(d.toLocaleDateString('en-GB'))+' • '+enToKu(d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}));}
+function renderAudit(){
+  const box=document.getElementById('auditBox');if(!box)return;
+  const log=auditGet();
+  if(!log.length){box.innerHTML='<div style="font-size:12px;color:var(--muted);padding:8px">هێشتا چالاکییەک تۆمار نەکراوە.</div>';return;}
+  box.innerHTML=log.slice(0,40).map(e=>`<div class="audit-row"><div class="aa">${esc(e.a)}</div><div class="ad">${esc(e.d)}</div><div class="at">${fmtAuditTime(e.t)}</div></div>`).join('');
+}
+function clearAudit(){if(confirm('هەموو تۆماری چالاکی بسڕدرێتەوە؟')){try{localStorage.removeItem('vim_audit');}catch(e){}renderAudit();toast('سڕایەوە');}}
 function qrSvg(text,cell){try{const q=qrcode(0,'M');q.addData(text);q.make();return q.createSvgTag({cellSize:cell||3,margin:2});}catch(e){return '';}}
 /* ====== ⚙️ کلیلەکانی Supabase لێرە دابنێ ====== */
 const SUPABASE_URL = 'https://llzvnfejumpgyjueuajf.supabase.co';
@@ -1011,6 +1063,66 @@ function renderMonthBar(){
 function shiftMonth(d){let[y,m]=selMonth.split('-').map(Number);m+=d;if(m<1){m=12;y--;}if(m>12){m=1;y++;}selMonth=y+'-'+String(m).padStart(2,'0');renderMonthBar();renderPurchases();renderAnalytics();}
 function goToday(){selMonth=monthKey(new Date().toISOString());renderMonthBar();renderPurchases();renderAnalytics();}
 
+/* ================= هاوڕێی زیرەک (offline assistant) ================= */
+function dismissedAsst(){try{return JSON.parse(localStorage.getItem('vim_asst_x')||'{}');}catch(e){return {};}}
+function dismissAsst(id){try{const d=dismissedAsst();d[id]=new Date().toISOString().slice(0,10);localStorage.setItem('vim_asst_x',JSON.stringify(d));}catch(e){}renderAssistant();}
+function greetWord(){const h=new Date().getHours();return h<12?'بەیانیت باش':h<17?'ڕۆژباشت':h<21?'ئێوارەت باش':'شەوت باش';}
+function renderAssistant(){
+  const box=document.getElementById('assistant');if(!box)return;
+  const P=state.purchases;const now=new Date();
+  const dz=dismissedAsst();const today=now.toISOString().slice(0,10);
+  const cards=[];
+  const thisM=monthKey(now.toISOString());
+  const lastMk=(function(){const d=new Date(now.getFullYear(),now.getMonth()-1,1);return monthKey(d.toISOString());})();
+  const spentIn=mk=>P.filter(p=>monthKey(p.date)===mk&&isSpent(p)).reduce((s,p)=>s+amtIQD(p),0);
+  const curSpent=spentIn(thisM),lastSpent=spentIn(lastMk);
+  // greeting (always, not dismissable, only when viewing current month)
+  const cntThis=P.filter(p=>monthKey(p.date)===thisM).length;
+  cards.push({id:'greet',cls:'',ai:'👋',html:`<b>${greetWord()}!</b> ئەم مانگە ${enToKu(cntThis)} داواکاریت هەیە بە کۆی ${fmt(curSpent)} د.ع.`,noX:true});
+  // overdue unpaid
+  const overdue=P.filter(p=>p.status==='purchased'&&p.due&&new Date(p.due)<new Date(today));
+  if(overdue.length&&dz['overdue']!==today){
+    const tot=overdue.reduce((s,p)=>s+amtIQD(p),0);
+    cards.push({id:'overdue',cls:'alert',ai:'⏰',html:`<b>${enToKu(overdue.length)} پارەدان</b> وادەیان تێپەڕیوە (${fmt(tot)} د.ع). بیرت نەچێت!`});
+  }
+  // due soon (next 5 days)
+  const soon=P.filter(p=>{if(p.status!=='purchased'||!p.due)return false;const d=new Date(p.due),diff=(d-new Date(today))/86400000;return diff>=0&&diff<=5;});
+  if(soon.length&&dz['soon']!==today){
+    cards.push({id:'soon',cls:'warn',ai:'🔔',html:`<b>${enToKu(soon.length)} پارەدان</b> لە ٥ ڕۆژی داهاتوودا وادەیان دێت.`});
+  }
+  // month-over-month comparison
+  if(lastSpent>0&&curSpent>0&&dz['mom']!==today){
+    const diff=Math.round((curSpent-lastSpent)/lastSpent*100);
+    if(Math.abs(diff)>=15){
+      if(diff>0)cards.push({id:'mom',cls:'warn',ai:'📈',html:`ئەم مانگە <b>${enToKu(diff)}٪ زیاتر</b> خەرجت کردووە لە مانگی پێشوو. ئاگاداربە!`});
+      else cards.push({id:'mom',cls:'good',ai:'📉',html:`ئەم مانگە <b>${enToKu(Math.abs(diff))}٪ کەمتر</b> خەرجت کردووە لە مانگی پێشوو. باشە! 👏`});
+    }
+  }
+  // cheaper-supplier tip (item bought from 2+ suppliers at different unit prices)
+  if(dz['cheap']!==today){
+    const byItem={};
+    P.filter(isSpent).forEach(p=>{if(!p.supplierId)return;const k=(p.item||'').trim().toLowerCase();if(!k)return;(byItem[k]=byItem[k]||[]).push(p);});
+    let best=null;
+    Object.values(byItem).forEach(arr=>{
+      const sup={};arr.forEach(p=>{const u=amtIQD(p)/Math.max(1,p.qty||1);(sup[p.supplierId]=sup[p.supplierId]||[]).push(u);});
+      const ids=Object.keys(sup);if(ids.length<2)return;
+      const avg=ids.map(id=>({id,u:sup[id].reduce((a,b)=>a+b,0)/sup[id].length}));
+      avg.sort((a,b)=>a.u-b.u);
+      const cheap=avg[0],exp=avg[avg.length-1];
+      if(exp.u>cheap.u*1.12){const save=Math.round((exp.u-cheap.u)/exp.u*100);
+        if(!best||save>best.save)best={item:arr[0].item,cheapSup:cheap.id,save};}
+    });
+    if(best)cards.push({id:'cheap',cls:'good',ai:'💡',html:`<b>${esc(best.item)}</b> لە <b>${esc(supName(best.cheapSup))}</b> نزیکەی ${enToKu(best.save)}٪ هەرزانترە. لەوێ بیکڕە بۆ پاشەکەوت!`});
+  }
+  // inactivity nudge
+  if(P.length&&dz['idle']!==today){
+    const latest=P.reduce((mx,p)=>{const d=new Date(p.date);return d>mx?d:mx;},new Date(0));
+    const days=Math.floor((new Date(today)-new Date(latest.toISOString().slice(0,10)))/86400000);
+    if(days>=6)cards.push({id:'idle',cls:'',ai:'📋',html:`ماوەی <b>${enToKu(days)} ڕۆژ</b>ە داواکارییەکی نوێ زیاد نەکراوە. هەموو شت باشە؟`});
+  }
+  box.innerHTML=cards.map(c=>`<div class="asst-card ${c.cls}"><div class="ai">${c.ai}</div><div class="tx">${c.html}</div>${c.noX?'':`<button class="close" onclick="dismissAsst('${c.id}')">×</button>`}</div>`).join('');
+}
+
 /* ================= CATEGORY PICKERS ================= */
 function buildCatPickers(){
   const html=state.categories.map(c=>`<button class="cat-chip" data-cat="${c.id}"><span class="ce">${c.icon}</span>${esc(c.name)}</button>`).join('');
@@ -1079,6 +1191,7 @@ async function addPurchase(){
     {const n=new Date();document.getElementById('pDate').value=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');}
     document.getElementById('pStatus').value='requested';pStatus='requested';
     document.getElementById('priceHint').classList.remove('show');
+    logAudit('زیادکردن',`${item} — ${fmt(amount)} د.ع`);
     setReceipt('bru');
     renderMonthBar();renderPurchases();renderAnalytics();renderSettings();
     toast('داواکاری زیادکرا ✓');
@@ -1158,6 +1271,7 @@ async function parseVoice(){
 /* ================= RENDER PURCHASES ================= */
 function renderPurchases(){
   renderDueAlert();
+  renderAssistant();
   const all=state.purchases;
   const totalSaving=all.reduce((s,p)=>s+(p.saving||0),0);
   const totalSpent=all.filter(isSpent).reduce((s,p)=>s+p.amount,0);
@@ -1255,19 +1369,29 @@ async function saveDetail(){
   if(!qty||qty<1)qty=1;
   const projectId=document.getElementById('dProject').value||null;
   const currency=document.getElementById('dCurrency').value||'IQD';
+  const prevStatus=p.status;
   await withSync(async()=>{
     const {error}=await sb.from('purchases').update({item_name:item,amount,qty,po_number:po,supplier_id:supplierId,due_date:due,cat:detailCat,status:detailStatus,no_receipt:detailReceipt==='none',receipt_type:detailReceipt,project_id:projectId,currency}).eq('id',detailId);
     if(error) throw error;
     Object.assign(p,{item,amount,qty,po,supplierId,due,cat:detailCat,status:detailStatus,noReceipt:detailReceipt==='none',receiptType:detailReceipt,projectId,currency});
+    if(prevStatus!==detailStatus){
+      const who=getApprover();
+      logAudit('گۆڕینی دۆخ',`${item}: ${STATUS_LABEL[prevStatus]} → ${STATUS_LABEL[detailStatus]}${(detailStatus==='approved'&&who)?' (پەسەندکار: '+who+')':''}`);
+    }else{
+      logAudit('دەستکاری',`${item} — ${fmt(amount)} د.ع`);
+    }
     closeDetail();renderMonthBar();renderPurchases();renderAnalytics();renderSettings();toast('پاشەکەوتکرا ✓');
   });
 }
+function getApprover(){try{return localStorage.getItem('vim_approver')||'';}catch(e){return '';}}
 async function deleteDetail(){
+  const delItem=(state.purchases.find(x=>x.id===detailId)||{}).item||'داواکاری';
   await withSync(async()=>{
     const {error}=await sb.from('purchases').delete().eq('id',detailId);
     if(error) throw error;
     state.purchases=state.purchases.filter(p=>p.id!==detailId);
     state.quotes=state.quotes.filter(q=>q.purchaseId!==detailId);
+    logAudit('سڕینەوە',delItem);
     closeDetail();renderPurchases();renderAnalytics();renderSettings();toast('سڕایەوە');
   });
 }
@@ -1825,6 +1949,62 @@ function openRankings(){
   document.getElementById('rankOverlay').classList.add('show');
 }
 function closeRankings(){document.getElementById('rankOverlay').classList.remove('show');}
+/* ================= ڕاپۆرتی ژمێریاری (Accounting) ================= */
+function accountingScope(){
+  const v=document.getElementById('acctScope')?document.getElementById('acctScope').value:'all';
+  if(v==='month')return {list:state.purchases.filter(p=>monthKey(p.date)===selMonth),label:monthLabelText(selMonth)};
+  if(v==='year'){const y=selMonth.split('-')[0];return {list:state.purchases.filter(p=>String(new Date(p.date).getFullYear())===y),label:'ساڵی '+enToKu(y)};}
+  return {list:state.purchases.slice(),label:'هەموو کات'};
+}
+function printAccounting(){
+  const {list,label}=accountingScope();
+  if(!list.length){toast('هیچ داتایەک نییە بۆ ئەم ماوەیە');return;}
+  const spent=list.filter(isSpent).reduce((s,p)=>s+amtIQD(p),0);
+  const saved=list.reduce((s,p)=>s+(p.saving||0),0);
+  // receipt split
+  const zh=list.filter(p=>p.receiptType==='zhira'),bru=list.filter(p=>p.receiptType==='bru'),non=list.filter(p=>p.receiptType==='none');
+  const sum=a=>a.filter(isSpent).reduce((s,p)=>s+amtIQD(p),0);
+  // by month
+  const byM={};list.filter(isSpent).forEach(p=>{const mk=monthKey(p.date);byM[mk]=(byM[mk]||0)+amtIQD(p);});
+  const mRows=Object.keys(byM).sort().map(mk=>`<tr><td>${monthLabelText(mk)}</td><td>${fmt(byM[mk])} د.ع</td></tr>`).join('');
+  // by category
+  const byC={};list.filter(isSpent).forEach(p=>{byC[p.cat]=(byC[p.cat]||0)+amtIQD(p);});
+  const cRows=Object.keys(byC).map(id=>({c:catById(id),v:byC[id]})).sort((a,b)=>b.v-a.v)
+    .map(x=>`<tr><td>${x.c.icon} ${esc(x.c.name)}</td><td>${fmt(x.v)} د.ع</td></tr>`).join('');
+  const w=window.open('','_blank');if(!w){toast('ڕێگە بدە بە کردنەوەی پەنجەرە');return;}
+  const right=`<div class="muted">ماوە: <b>${label}</b></div><div class="muted">ژمارە: ${enToKu(list.length)} داواکاری</div><div class="muted">${enToKu(new Date().toLocaleDateString('en-GB'))}</div>`;
+  w.document.write(`<!DOCTYPE html><html dir="rtl" lang="ckb"><head><meta charset="utf-8"><title>ڕاپۆرتی ژمێریاری</title>
+  <style>${pdfStyle()}</style></head><body><div class="wrap">
+  ${pdfHeader('ڕاپۆرتی ژمێریاری — Accounting Report',right)}
+  <div class="grid"><div class="box"><div class="lbl">کۆی خەرجی</div><div class="val">${fmt(spent)} د.ع</div></div>
+  <div class="box"><div class="lbl">کۆی پاشەکەوت</div><div class="val" style="color:#16a34a">${fmt(saved)} د.ع</div></div></div>
+  <h3>جۆری وەسڵ</h3>
+  <table><thead><tr><th>جۆر</th><th>ژمارە</th><th>کۆی بڕ</th></tr></thead><tbody>
+    <tr><td>🔴 وەسڵی ژیرە</td><td>${enToKu(zh.length)}</td><td>${fmt(sum(zh))} د.ع</td></tr>
+    <tr><td>⚫ وەسڵی بڕوا</td><td>${enToKu(bru.length)}</td><td>${fmt(sum(bru))} د.ع</td></tr>
+    ${non.length?`<tr><td>بەبێ وەسڵ</td><td>${enToKu(non.length)}</td><td>${fmt(sum(non))} د.ع</td></tr>`:''}
+  </tbody></table>
+  <h3>کۆی خەرجی بەپێی مانگ</h3>
+  <table><thead><tr><th>مانگ</th><th>خەرجی</th></tr></thead><tbody>${mRows}</tbody></table>
+  <h3>کۆی خەرجی بەپێی هاوپۆل</h3>
+  <table><thead><tr><th>هاوپۆل</th><th>خەرجی</th></tr></thead><tbody>${cRows}</tbody></table>
+  <div class="total">کۆی گشتی خەرجکراو: ${fmt(spent)} د.ع</div>
+  ${pdfFooter()}</div>
+  <script>window.onload=function(){setTimeout(function(){window.print()},500)}<\/script></body></html>`);
+  w.document.close();
+  logAudit('ڕاپۆرت','ژمێریاری — '+label);
+}
+function exportAccountingCSV(){
+  const {list,label}=accountingScope();
+  if(!list.length){toast('هیچ داتایەک نییە');return;}
+  const rows=[['بەروار','کاڵا','بڕ','فرۆشیار','هاوپۆل','جۆری_وەسڵ','دۆخ','یەکە','بڕی_پارە']];
+  const RT={zhira:'ژیرە',bru:'بڕوا',none:'بەبێ وەسڵ'};
+  list.slice().sort((a,b)=>new Date(a.date)-new Date(b.date)).forEach(p=>{
+    rows.push([enToKu(new Date(p.date).toLocaleDateString('en-GB')),'"'+(p.item||'').replace(/"/g,'""')+'"',p.qty||1,'"'+supName(p.supplierId)+'"','"'+catById(p.cat).name+'"',RT[p.receiptType]||'بڕوا',STATUS_LABEL[p.status],p.currency||'IQD',p.amount]);
+  });
+  download('\ufeff'+rows.map(r=>r.join(',')).join('\n'),'accounting-'+label+'.csv','text/csv;charset=utf-8');
+  logAudit('هەناردە','CSV ی ژمێریاری — '+label);
+}
 function printRangeReport(){
   const from=document.getElementById('repFrom').value,to=document.getElementById('repTo').value;
   if(!from||!to){toast('هەردوو بەروار هەڵبژێرە');return;}
@@ -1905,6 +2085,7 @@ function renderSettings(){
   document.getElementById('statSup').textContent=enToKu(state.suppliers.length)+' فرۆشیار';
   document.getElementById('statSave').textContent=fmt(state.purchases.reduce((s,p)=>s+(p.saving||0),0))+' د.ع';
   if(currentUser)document.getElementById('userEmail').textContent=currentUser.email||'—';
+  renderAudit();
   const pb=document.getElementById('pinBtns');
   if(pb){
     if(hasPin()){
@@ -2156,6 +2337,10 @@ document.getElementById('autoCatBtn').onclick=autoCategorize;
 (function(){const u=document.getElementById('usdRate');if(u){u.value=USD_RATE;u.addEventListener('change',()=>{const v=parseFloat(u.value);if(v>0){USD_RATE=v;try{localStorage.setItem('vim_usd',String(v));}catch(e){}renderPurchases();renderAnalytics();toast('ڕێژە نوێکرایەوە');}});}})();
 document.getElementById('presentClose').onclick=closePresent;
 document.getElementById('repBtn').onclick=printRangeReport;
+document.getElementById('acctPdfBtn').onclick=printAccounting;
+document.getElementById('acctCsvBtn').onclick=exportAccountingCSV;
+document.getElementById('auditClearBtn').onclick=clearAudit;
+(function(){const a=document.getElementById('approverName');if(a){a.value=getApprover();a.addEventListener('change',()=>{try{localStorage.setItem('vim_approver',a.value.trim());}catch(e){}toast('پاشەکەوتکرا ✓');});}})();
 document.getElementById('taskInput').addEventListener('keydown',e=>{if(e.key==='Enter')addTask();});
 
 document.querySelectorAll('.filter').forEach(f=>f.addEventListener('click',()=>{document.querySelectorAll('.filter').forEach(x=>x.classList.remove('active'));f.classList.add('active');selFilter=f.dataset.f;renderPurchases();}));
