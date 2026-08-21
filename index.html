@@ -2286,7 +2286,8 @@ function pinDel(){pinBuf=pinBuf.slice(0,-1);renderPinDots();}
 function pinErr(sub){const box=document.getElementById('pinDots');box.classList.add('err');document.getElementById('pinSub').textContent=sub;setTimeout(()=>{pinBuf='';box.classList.remove('err');renderPinDots();},450);}
 function pinComplete(){
   if(pinMode==='enter'){
-    if(pinHash(pinBuf)===localStorage.getItem('vim_pin')){showScreen('app');}
+    let saved='';try{saved=localStorage.getItem('vim_pin')||'';}catch(e){}
+    if(pinHash(pinBuf)===saved){showScreen('app');}
     else pinErr('کۆد هەڵەیە، دووبارە هەوڵبدە');
   }else if(pinMode==='set'){
     pinFirst=pinBuf;pinBuf='';pinMode='confirm';
