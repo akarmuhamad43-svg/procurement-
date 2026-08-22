@@ -223,6 +223,10 @@
   .badge.ok{background:rgba(52,211,153,.14);color:var(--save)}
   .badge.zh{background:rgba(239,68,68,.18);color:#fca5a5}
   .badge.bru{background:rgba(148,163,184,.16);color:var(--muted)}
+  .code-tag{display:inline-block;background:color-mix(in srgb,var(--gold) 18%,transparent);color:var(--gold);font-size:10px;font-weight:800;padding:1px 6px;border-radius:6px;margin-inline-end:5px;font-feature-settings:"tnum";letter-spacing:.3px}
+  .code-line{margin:-4px 0 12px;cursor:pointer}
+  .code-line:empty{display:none}
+  .code-line .cl-sub{font-size:11.5px;color:var(--muted)}
   .seg3{grid-template-columns:1fr 1fr 1fr}
   .seg3 .seg-btn{padding:12px 4px;font-size:12px}
   .due-alert{display:none;margin:4px 0 4px;background:linear-gradient(180deg,rgba(239,68,68,.10),rgba(239,68,68,.04));
@@ -839,6 +843,7 @@
 <!-- purchase detail -->
 <div class="overlay" id="detailOverlay"><div class="sheet">
   <div class="sheet-head"><h3 id="dTitle">وردەکاری داواکاری</h3><button class="close" id="dClose">×</button></div>
+  <div id="dCodeLine" class="code-line"></div>
   <div class="field"><label>ناوی کاڵا</label><input type="text" id="dItem"></div>
   <div class="row2">
     <div class="field"><label>بڕی پارە</label><input type="number" id="dAmount" inputmode="decimal"></div>
@@ -984,7 +989,19 @@ const STATUS_LABEL={requested:'داواکراو',approved:'پەسەندکراو'
 const STATUS_ICON={requested:'📝',approved:'✅',purchased:'📦',paid:'💵'};
 
 let sb=null,currentUser=null;
-let state={purchases:[],suppliers:[],quotes:[],categories:[],tasks:[],budgets:{},projects:[]};
+let state={purchases:[],suppliers:[],quotes:[],categories:[],tasks:[],budgets:{},projects:[],itemCodes:{}};
+/* ===== کۆدی خۆکار بۆ هەر جۆرێک کاڵا (Item Codes) ===== */
+function buildItemCodes(){
+  // assign a stable code per unique normalized item name, by first appearance (oldest first)
+  const map={};let n=0;
+  const sorted=state.purchases.slice().sort((a,b)=>{
+    const da=new Date(a.date||0)-new Date(b.date||0);
+    return da!==0?da:String(a.id).localeCompare(String(b.id));
+  });
+  sorted.forEach(p=>{const k=normItem(p.item);if(!k)return;if(!(k in map)){n++;map[k]='PO_A-'+String(n).padStart(3,'0');}});
+  state.itemCodes=map;
+}
+function itemCode(p){if(!p)return '';return state.itemCodes[normItem(p.item)]||'';}
 let currentPage='purchases',selFilter='all',selCat=null,pReceipt='bru',pStatus='requested';
 let selMonth=monthKey(new Date().toISOString());
 let searchQ='',detailId=null,detailStatus='requested',detailCat=null,detailReceipt='bru',scoreId=null;
@@ -1272,6 +1289,7 @@ async function parseVoice(){
 function renderPurchases(){
   renderDueAlert();
   renderAssistant();
+  buildItemCodes();
   const all=state.purchases;
   const totalSaving=all.reduce((s,p)=>s+(p.saving||0),0);
   const totalSpent=all.filter(isSpent).reduce((s,p)=>s+p.amount,0);
@@ -1289,7 +1307,7 @@ function renderPurchases(){
   const lt=document.getElementById('listTitle');
   if(searching){
     const q=searchQ.trim().toLowerCase();
-    shown=all.filter(p=>(p.item||'').toLowerCase().includes(q)||(supName(p.supplierId)||'').toLowerCase().includes(q)||(p.po||'').toLowerCase().includes(q)||(p.note||'').toLowerCase().includes(q)||(projName(p.projectId)||'').toLowerCase().includes(q));
+    shown=all.filter(p=>(p.item||'').toLowerCase().includes(q)||(supName(p.supplierId)||'').toLowerCase().includes(q)||(p.po||'').toLowerCase().includes(q)||(itemCode(p)||'').toLowerCase().includes(q)||(p.note||'').toLowerCase().includes(q)||(projName(p.projectId)||'').toLowerCase().includes(q));
     const tot=shown.reduce((s,p)=>s+(p.amount||0),0);
     lt.textContent='ئەنجامی گەڕان — کۆ: '+fmt(tot)+' د.ع';
   }else if(selFilter==='unpaid'){shown=all.filter(p=>p.status==='purchased');lt.textContent='پارەدراونەکراو';}
@@ -1305,10 +1323,12 @@ function renderPurchases(){
     const nr=p.receiptType==='zhira'?'<span class="badge zh">🔴 ژیرە</span>':p.receiptType==='none'?'<span class="badge nr">بەبێ وەسڵ</span>':'<span class="badge bru">بڕوا</span>';
     const qtyTxt=(p.qty&&p.qty>1)?` <span class="sup">×${enToKu(p.qty)}</span>`:'';
     const dueWarn=(p.status==='purchased'&&p.due)?`<span class="badge warn">وادە ${enToKu(new Date(p.due).toLocaleDateString('en-GB'))}</span>`:'';
+    const code=itemCode(p);
+    const codeTag=code?`<span class="code-tag">${code}</span>`:'';
     return `<div class="pur" onclick="openDetail('${p.id}')">
       <div class="ic" style="background:${hexA(c.color,0.16)};color:${c.color}">${c.icon}</div>
       <div class="info"><div class="d">${esc(p.item)}${qtyTxt} ${nr}</div>
-        <div class="dt"><span class="sup">${esc(supName(p.supplierId))}</span> • ${relDate(p.date)}${p.po?' • '+esc(p.po):''}</div></div>
+        <div class="dt">${codeTag}<span class="sup">${esc(supName(p.supplierId))}</span> • ${relDate(p.date)}${p.po?' • '+esc(p.po):''}</div></div>
       <div class="right"><div class="amt num">${fmt(p.amount)}${p.currency==='USD'?' $':''}</div><span class="badge ${p.status}">${STATUS_LABEL[p.status]}</span>${sv||dueWarn}</div>
     </div>`;
   }).join('');
@@ -1338,6 +1358,11 @@ function renderDueAlert(){
 function openDetail(id){
   const p=state.purchases.find(x=>x.id===id);if(!p)return;
   detailId=id;detailStatus=p.status;detailCat=p.cat||fallbackCat().id;
+  const code=itemCode(p);
+  const sameCount=code?state.purchases.filter(x=>normItem(x.item)===normItem(p.item)).length:0;
+  const cl=document.getElementById('dCodeLine');
+  if(cl)cl.innerHTML=code?`<span class="code-tag">${code}</span> <span class="cl-sub">${enToKu(sameCount)} کڕین بەم کۆدە • کلیک بۆ بینینیان</span>`:'';
+  if(cl)cl.onclick=code?()=>{closeDetail();document.getElementById('searchInput').value=code;searchQ=code.toLowerCase();document.getElementById('page-purchases').scrollIntoView();renderPurchases();}:null;
   document.getElementById('dItem').value=p.item;
   document.getElementById('dAmount').value=p.amount;
   document.getElementById('dQty').value=p.qty||1;
